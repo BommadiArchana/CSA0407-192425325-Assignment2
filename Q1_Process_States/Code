@@ -1,1 +1,90 @@
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+#define CHILDREN 3
+
+int main()
+{
+    pid_t pid[CHILDREN];
+
+    printf("Online Examination Server\n");
+    printf("Parent Process ID: %d\n", getpid());
+    printf("Creating student processes...\n\n");
+    fflush(stdout);
+
+    for (int i = 0; i < CHILDREN; i++)
+    {
+        pid[i] = fork();
+
+        if (pid[i] < 0)
+        {
+            perror("Fork failed");
+            exit(1);
+        }
+
+        if (pid[i] == 0)
+        {
+            printf("Student Process %d created | PID: %d | PPID: %d\n",
+                   i + 1, getpid(), getppid());
+            fflush(stdout);
+
+            sleep(20);
+            exit(0);
+        }
+    }
+
+    sleep(2);
+
+    printf("\n--- Process Information using /proc ---\n");
+
+    for (int i = 0; i < CHILDREN; i++)
+    {
+        char path[100];
+        char line[256];
+
+        sprintf(path, "/proc/%d/status", pid[i]);
+
+        FILE *fp = fopen(path, "r");
+
+        if (fp != NULL)
+        {
+            printf("\nStudent PID: %d\n", pid[i]);
+
+            while (fgets(line, sizeof(line), fp))
+            {
+                if (strncmp(line, "Name:", 5) == 0 ||
+                    strncmp(line, "State:", 6) == 0 ||
+                    strncmp(line, "PPid:", 5) == 0 ||
+                    strncmp(line, "VmRSS:", 6) == 0)
+                {
+                    printf("%s", line);
+                }
+            }
+
+            fclose(fp);
+        }
+    }
+
+    printf("\n--- Process Information using ps ---\n");
+
+    char command[100];
+    sprintf(command,
+            "ps -o pid,ppid,state,comm -p %d,%d,%d,%d",
+            getpid(), pid[0], pid[1], pid[2]);
+
+    system(command);
+
+    for (int i = 0; i < CHILDREN; i++)
+    {
+        waitpid(pid[i], NULL, 0);
+    }
+
+    printf("\nAll student processes completed.\n");
+
+    return 0;
+}
+
