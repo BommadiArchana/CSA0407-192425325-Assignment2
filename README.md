@@ -43,7 +43,7 @@ The objective is to understand how operating systems manage processes, allocate 
 
 ## 4. Assignment Tasks
 
-### Q1 – Processes and Process States (6 Marks)
+### Q1 – Processes and Process States 
 
 **Problem Context:** Online Examination Server
 
@@ -59,7 +59,7 @@ This task demonstrates process creation using the `fork()` system call.
 
 **Evidence:** C program, execution output, process-state diagram and PCB description.
 
-### Q2 – CPU Scheduling (8 Marks)
+### Q2 – CPU Scheduling 
 
 **Problem Context:** Cloud Video-Encoding Service
 
@@ -76,7 +76,7 @@ This task evaluates CPU scheduling algorithms for jobs with different arrival ti
 
 **Evidence:** Scheduling calculations, Gantt charts, C program, execution outputs and performance comparison.
 
-### Q3 – Threads (6 Marks)
+### Q3 – Threads 
 
 **Problem Context:** Traffic-Camera Number-Plate Reader
 
@@ -93,7 +93,7 @@ This task analyses multithreading for processing traffic-camera frames.
 
 **Evidence:** Multithreaded C program, execution output, thread diagrams and performance comparison.
 
-### Q4 – Inter-Process Communication (6 Marks)
+### Q4 – Inter-Process Communication 
 
 **Problem Context:** Weather Station Data Pipeline
 
@@ -109,7 +109,7 @@ This task demonstrates communication between processes for exchanging weather re
 
 **Evidence:** IPC implementation, execution outputs, communication diagrams and transfer-time comparison.
 
-### Q5 – Synchronisation: Critical Sections, Semaphores and Monitors (11 Marks)
+### Q5 – Synchronisation: Critical Sections, Semaphores and Monitors 
 
 **Problem Context:** Railway Ticket Booking
 
@@ -126,7 +126,7 @@ This task demonstrates synchronization techniques to prevent race conditions and
 
 **Evidence:** Synchronization C program, semaphore implementation, execution outputs and locking decision.
 
-### Q6 – Deadlock Handling and the Banker's Algorithm (13 Marks)
+### Q6 – Deadlock Handling and the Banker's Algorithm 
 
 **Problem Context:** Shared Laboratory Equipment Scheduler
 
