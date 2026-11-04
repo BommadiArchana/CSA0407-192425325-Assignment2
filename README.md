@@ -159,27 +159,26 @@ CSA0407-192425325-Assignment2/
 │
 ├── Q2_CPU_Scheduling/
 │   ├── Code/
-│   ├── Screenshots/
-│   └── Gantt_Charts/
+│   ├──  Diagrams/
+│   └── Output/
 │
 ├── Q3_Threads/
 │   ├── Code/
-│   ├── Screenshots/
+│   ├──  Diagrams/
 │   └── Output/
 │
 ├── Q4_Inter_Process_Communication/
 │   ├── Code/
-│   ├── Screenshots/
+│   ├──  Diagrams/
 │   └── Output/
 │
 ├── Q5_Synchronization/
 │   ├── Code/
-│   ├── Screenshots/
+│   ├──  Diagrams/
 │   └── Output/
 │
 ├── Q6_Deadlock_Bankers_Algorithm/
-│   ├── Code/
-│   ├── Screenshots/
+│   ├── Code/ 
 │   ├── Output/
 │   └── Diagrams/
 │
