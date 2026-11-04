@@ -1,0 +1,92 @@
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <string.h>
+
+typedef struct {
+    int temperature;
+    int humidity;
+    int pressure;
+} WeatherData;
+
+int main()
+{
+    int fd[2];
+    pid_t pid;
+
+    WeatherData readings[3] = {
+        {28, 65, 1012},
+        {30, 70, 1010},
+        {27, 60, 1015}
+    };
+
+    if (pipe(fd) == -1)
+    {
+        perror("Pipe creation failed");
+        return 1;
+    }
+
+    pid = fork();
+
+    if (pid < 0)
+    {
+        perror("Fork failed");
+        return 1;
+    }
+
+    if (pid == 0)
+    {
+        close(fd[1]);
+
+        WeatherData data;
+        int count = 0;
+        ssize_t n;
+
+        printf("WEATHER DATA ANALYZER\n");
+
+        while ((n = read(fd[0], &data, sizeof(data))) > 0)
+        {
+            if (n != sizeof(data))
+            {
+                printf("Incomplete reading received\n");
+                break;
+            }
+
+            count++;
+
+            printf("\nReading %d\n", count);
+            printf("Temperature: %d C\n", data.temperature);
+            printf("Humidity: %d%%\n", data.humidity);
+            printf("Pressure: %d hPa\n", data.pressure);
+        }
+
+        printf("\nTotal readings received: %d\n", count);
+
+        close(fd[0]);
+        exit(0);
+    }
+    else
+    {
+        close(fd[0]);
+
+        printf("WEATHER SENSOR\n");
+
+        for (int i = 0; i < 3; i++)
+        {
+            write(fd[1], &readings[i], sizeof(WeatherData));
+
+            printf("Sent weather reading %d\n", i + 1);
+        }
+
+        close(fd[1]);
+
+        wait(NULL);
+
+        printf("\nData transmission completed.\n");
+    }
+
+    return 0;
+}
