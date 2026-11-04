@@ -1,0 +1,96 @@
+
+#define _POSIX_C_SOURCE 200809L
+#include <stdio.h>
+#include <pthread.h>
+#include <semaphore.h>
+
+#define SIZE 5
+#define ITEMS 20
+#define PRODUCERS 1
+#define CONSUMERS 1
+
+int buffer[SIZE], in = 0, out = 0;
+int next_item = 1;
+long consumed_sum = 0;
+
+sem_t empty, full;
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+
+void *producer(void *arg)
+{
+    int id = *(int *)arg;
+
+    for (int i = 0; i < ITEMS / PRODUCERS; i++)
+    {
+        sem_wait(&empty);
+        pthread_mutex_lock(&lock);
+
+        int item = next_item++;
+        buffer[in] = item;
+        printf("Producer %d produced: %d\n", id, item);
+        in = (in + 1) % SIZE;
+
+        pthread_mutex_unlock(&lock);
+        sem_post(&full);
+    }
+
+    return NULL;
+}
+
+void *consumer(void *arg)
+{
+    int id = *(int *)arg;
+
+    for (int i = 0; i < ITEMS / CONSUMERS; i++)
+    {
+        sem_wait(&full);
+        pthread_mutex_lock(&lock);
+
+        int item = buffer[out];
+        out = (out + 1) % SIZE;
+        consumed_sum += item;
+
+        printf("Consumer %d consumed: %d\n", id, item);
+
+        pthread_mutex_unlock(&lock);
+        sem_post(&empty);
+    }
+
+    return NULL;
+}
+
+int main()
+{
+    pthread_t p[PRODUCERS], c[CONSUMERS];
+    int pid[PRODUCERS], cid[CONSUMERS];
+
+    sem_init(&empty, 0, SIZE);
+    sem_init(&full, 0, 0);
+
+    for (int i = 0; i < PRODUCERS; i++)
+    {
+        pid[i] = i + 1;
+        pthread_create(&p[i], NULL, producer, &pid[i]);
+    }
+
+    for (int i = 0; i < CONSUMERS; i++)
+    {
+        cid[i] = i + 1;
+        pthread_create(&c[i], NULL, consumer, &cid[i]);
+    }
+
+    for (int i = 0; i < PRODUCERS; i++)
+        pthread_join(p[i], NULL);
+
+    for (int i = 0; i < CONSUMERS; i++)
+        pthread_join(c[i], NULL);
+
+    printf("\nItems consumed: %d\n", ITEMS);
+    printf("Consumed sum: %ld (Expected: 210)\n", consumed_sum);
+
+    sem_destroy(&empty);
+    sem_destroy(&full);
+    pthread_mutex_destroy(&lock);
+
+    return 0;
+}
