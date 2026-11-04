@@ -1,0 +1,91 @@
+
+#include <stdio.h>
+#include <pthread.h>
+#include <time.h>
+
+#define CAMERAS 64
+#define WORK 300000
+
+typedef struct {
+    int start;
+    int end;
+    unsigned long long result;
+} ThreadData;
+
+void *process_cameras(void *arg)
+{
+    ThreadData *data = (ThreadData *)arg;
+    unsigned long long sum = 0;
+
+    for (int i = data->start; i < data->end; i++)
+    {
+        for (int j = 0; j < WORK; j++)
+        {
+            sum += (i * j) % 97;
+        }
+    }
+
+    data->result = sum;
+    return NULL;
+}
+
+double run_test(int thread_count)
+{
+    pthread_t threads[16];
+    ThreadData data[16];
+
+    int cameras_per_thread = CAMERAS / thread_count;
+    int extra = CAMERAS % thread_count;
+
+    struct timespec start, end;
+
+    clock_gettime(CLOCK_MONOTONIC, &start);
+
+    for (int i = 0; i < thread_count; i++)
+    {
+        data[i].start = i * cameras_per_thread +
+                        (i < extra ? i : extra);
+
+        data[i].end = data[i].start +
+                      cameras_per_thread + (i < extra ? 1 : 0);
+
+        data[i].result = 0;
+
+        pthread_create(&threads[i], NULL,
+                       process_cameras, &data[i]);
+    }
+
+    unsigned long long total = 0;
+
+    for (int i = 0; i < thread_count; i++)
+    {
+        pthread_join(threads[i], NULL);
+        total += data[i].result;
+    }
+
+    clock_gettime(CLOCK_MONOTONIC, &end);
+
+    double elapsed = (end.tv_sec - start.tv_sec) +
+                     (end.tv_nsec - start.tv_nsec) / 1e9;
+
+    printf("%2d Threads | Time: %.4f seconds | Result: %llu\n",
+           thread_count, elapsed, total);
+
+    return elapsed;
+}
+
+int main()
+{
+    printf("TRAFFIC CAMERA NUMBER-PLATE READER\n");
+    printf("Total Cameras: %d\n\n", CAMERAS);
+
+    double time4 = run_test(4);
+    double time8 = run_test(8);
+    double time16 = run_test(16);
+
+    printf("\n--- PERFORMANCE COMPARISON ---\n");
+    printf("Speedup (8 vs 4): %.2fx\n", time4 / time8);
+    printf("Speedup (16 vs 4): %.2fx\n", time4 / time16);
+
+    return 0;
+}
