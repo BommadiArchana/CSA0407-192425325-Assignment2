@@ -4,9 +4,9 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <string.h>
 
-typedef struct {
+typedef struct
+{
     int temperature;
     int humidity;
     int pressure;
@@ -39,13 +39,14 @@ int main()
 
     if (pid == 0)
     {
+        // Child process - Receives weather data
         close(fd[1]);
 
         WeatherData data;
         int count = 0;
         ssize_t n;
 
-        printf("WEATHER DATA ANALYZER\n");
+        printf("\nWEATHER DATA ANALYZER\n");
 
         while ((n = read(fd[0], &data, sizeof(data))) > 0)
         {
@@ -70,13 +71,20 @@ int main()
     }
     else
     {
+        // Parent process - Sends weather data
         close(fd[0]);
 
         printf("WEATHER SENSOR\n");
 
         for (int i = 0; i < 3; i++)
         {
-            write(fd[1], &readings[i], sizeof(WeatherData));
+            if (write(fd[1], &readings[i], sizeof(WeatherData)) != sizeof(WeatherData))
+            {
+                perror("Write failed");
+                close(fd[1]);
+                wait(NULL);
+                return 1;
+            }
 
             printf("Sent weather reading %d\n", i + 1);
         }
