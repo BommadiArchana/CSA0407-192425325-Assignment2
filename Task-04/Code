@@ -1,9 +1,6 @@
-
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/wait.h>
+#include <windows.h>
 
 typedef struct
 {
@@ -12,45 +9,47 @@ typedef struct
     int pressure;
 } WeatherData;
 
-int main()
+int main(int argc, char *argv[])
 {
-    int fd[2];
-    pid_t pid;
+    HANDLE readPipe, writePipe;
+    SECURITY_ATTRIBUTES sa;
+    STARTUPINFOA si;
+    PROCESS_INFORMATION pi;
+    char command[1024];
+    char programPath[MAX_PATH];
 
-    WeatherData readings[3] = {
-        {28, 65, 1012},
-        {30, 70, 1010},
-        {27, 60, 1015}
-    };
-
-    if (pipe(fd) == -1)
+    // Child process: Receive weather data
+    if (argc == 2)
     {
-        perror("Pipe creation failed");
-        return 1;
-    }
-
-    pid = fork();
-
-    if (pid < 0)
-    {
-        perror("Fork failed");
-        return 1;
-    }
-
-    if (pid == 0)
-    {
-        // Child process - Receives weather data
-        close(fd[1]);
+        readPipe = (HANDLE)(uintptr_t)strtoull(argv[1], NULL, 10);
 
         WeatherData data;
+        DWORD bytesRead;
         int count = 0;
-        ssize_t n;
 
         printf("\nWEATHER DATA ANALYZER\n");
 
-        while ((n = read(fd[0], &data, sizeof(data))) > 0)
+        while (1)
         {
-            if (n != sizeof(data))
+            char *ptr = (char *)&data;
+            DWORD totalRead = 0;
+
+            while (totalRead < sizeof(data))
+            {
+                if (!ReadFile(readPipe, ptr + totalRead,
+                              sizeof(data) - totalRead,
+                              &bytesRead, NULL) || bytesRead == 0)
+                {
+                    break;
+                }
+
+                totalRead += bytesRead;
+            }
+
+            if (totalRead == 0)
+                break;
+
+            if (totalRead != sizeof(data))
             {
                 printf("Incomplete reading received\n");
                 break;
@@ -66,35 +65,78 @@ int main()
 
         printf("\nTotal readings received: %d\n", count);
 
-        close(fd[0]);
-        exit(0);
+        CloseHandle(readPipe);
+        return 0;
     }
-    else
+
+    // Parent process: Send weather data
+    WeatherData readings[3] = {
+        {28, 65, 1012},
+        {30, 70, 1010},
+        {27, 60, 1015}
+    };
+
+    sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+    sa.bInheritHandle = TRUE;
+    sa.lpSecurityDescriptor = NULL;
+
+    if (!CreatePipe(&readPipe, &writePipe, &sa, 0))
     {
-        // Parent process - Sends weather data
-        close(fd[0]);
+        printf("Pipe creation failed\n");
+        return 1;
+    }
 
-        printf("WEATHER SENSOR\n");
+    // Prevent child from inheriting the write end
+    SetHandleInformation(writePipe, HANDLE_FLAG_INHERIT, 0);
 
-        for (int i = 0; i < 3; i++)
+    GetModuleFileNameA(NULL, programPath, MAX_PATH);
+
+    sprintf(command, "\"%s\" %llu",
+            programPath,
+            (unsigned long long)(uintptr_t)readPipe);
+
+    ZeroMemory(&si, sizeof(si));
+    si.cb = sizeof(si);
+    ZeroMemory(&pi, sizeof(pi));
+
+    if (!CreateProcessA(NULL, command, NULL, NULL, TRUE,
+                        0, NULL, NULL, &si, &pi))
+    {
+        printf("Process creation failed\n");
+        CloseHandle(readPipe);
+        CloseHandle(writePipe);
+        return 1;
+    }
+
+    CloseHandle(readPipe);
+
+    printf("WEATHER SENSOR\n");
+
+    for (int i = 0; i < 3; i++)
+    {
+        DWORD bytesWritten;
+
+        if (!WriteFile(writePipe, &readings[i],
+                       sizeof(WeatherData),
+                       &bytesWritten, NULL) ||
+            bytesWritten != sizeof(WeatherData))
         {
-            if (write(fd[1], &readings[i], sizeof(WeatherData)) != sizeof(WeatherData))
-            {
-                perror("Write failed");
-                close(fd[1]);
-                wait(NULL);
-                return 1;
-            }
-
-            printf("Sent weather reading %d\n", i + 1);
+            printf("Write failed\n");
+            break;
         }
 
-        close(fd[1]);
-
-        wait(NULL);
-
-        printf("\nData transmission completed.\n");
+        printf("Sent weather reading %d\n", i + 1);
     }
+
+    CloseHandle(writePipe);
+
+    WaitForSingleObject(pi.hProcess, INFINITE);
+
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+
+    printf("\nData transmission completed.\n");
 
     return 0;
 }
+
